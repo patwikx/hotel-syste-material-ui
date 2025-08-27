@@ -76,6 +76,10 @@ interface SidebarProps {
   onToggle: () => void;
   activeSection?: string;
   onSectionChange?: (section: string) => void;
+  // New props for dynamic counts
+  totalReservationsBadge: number;
+  checkInsBadge: number;
+  checkOutsBadge: number;
 }
 
 interface MenuItem {
@@ -97,7 +101,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   open,
   onToggle,
   activeSection = 'dashboard',
-  onSectionChange
+  onSectionChange,
+  totalReservationsBadge,
+  checkInsBadge,
+  checkOutsBadge,
 }) => {
   const router = useRouter();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
@@ -114,16 +121,17 @@ const Sidebar: React.FC<SidebarProps> = ({
     setExpandedSections(newExpanded);
   };
 
+  // Menu sections now use the new props for badge counts
   const menuSections: MenuSection[] = [
     {
       id: 'overview',
       title: 'OVERVIEW',
       items: [
-        { 
-          id: 'dashboard', 
-          label: 'Dashboard', 
-          icon: Dashboard, 
-          path: '/admin/dashboard' 
+        {
+          id: 'dashboard',
+          label: 'Dashboard',
+          icon: Dashboard,
+          path: '/admin'
         },
       ]
     },
@@ -146,11 +154,11 @@ const Sidebar: React.FC<SidebarProps> = ({
           id: 'reservations',
           label: 'Reservations',
           icon: BookOnline,
-          badge: 12,
+          badge: totalReservationsBadge, // Dynamic count
           children: [
             { id: 'reservation-list', label: 'All Reservations', icon: Assignment, path: '/admin/operations/reservations' },
-            { id: 'check-ins', label: 'Check-ins Today', icon: CheckCircle, badge: 5, path: '/admin/operations/check-ins' },
-            { id: 'check-outs', label: 'Check-outs Today', icon: Schedule, badge: 7, path: '/admin/operations/check-outs' },
+            { id: 'check-ins', label: 'Check-ins Today', icon: CheckCircle, badge: checkInsBadge, path: '/admin/operations/check-ins' }, // Dynamic count
+            { id: 'check-outs', label: 'Check-outs Today', icon: Schedule, badge: checkOutsBadge, path: '/admin/operations/check-outs' }, // Dynamic count
             { id: 'stays', label: 'Current Stays', icon: HomeWork, path: '/admin/operations/stays' },
           ]
         },
@@ -279,9 +287,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   const handleNavigation = (path: string, itemId: string) => {
-    // Update active section
     onSectionChange?.(itemId);
-    // Navigate to the path
     router.push(path);
   };
 
@@ -290,14 +296,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     const isExpanded = expandedSections.has(item.id);
     const isActive = activeSection === item.id;
     const Icon = item.icon;
-    
+
     const handleClick = () => {
       if (hasChildren) {
         toggleExpanded(item.id);
       } else if (item.path) {
         handleNavigation(item.path, item.id);
       } else {
-        // Fallback for items without paths
         onSectionChange?.(item.id);
       }
     };
@@ -420,7 +425,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             {section.title}
           </Typography>
         )}
-        
+
         <List component="div" disablePadding>
           {section.items.map((item) => renderMenuItem(item))}
         </List>
@@ -458,15 +463,10 @@ const Sidebar: React.FC<SidebarProps> = ({
               style={{ flex: 1 }}
             >
               {/* Logo placeholder - you can replace with actual logo */}
-
               <div className='flex'>
- <Image src="https://4b9moeer4y.ufs.sh/f/pUvyWRtocgCV0y3FUvkBwoHGKNiCbEI9uWYstSRk5rXgMLfx" height={32} width={32} alt="TWC Logo" /> 
- <span className='text-md font-black sans-serf ml-4 mt-1'>Dolores Hotels  </span>
+                <Image src="https://4b9moeer4y.ufs.sh/f/pUvyWRtocgCV0y3FUvkBwoHGKNiCbEI9uWYstSRk5rXgMLfx" height={32} width={32} alt="TWC Logo" />
+                <span className='text-md font-black sans-serf ml-4 mt-1'>Dolores Hotels </span>
               </div>
-     
-
-           
- 
             </motion.div>
           )}
         </AnimatePresence>
@@ -483,13 +483,13 @@ const Sidebar: React.FC<SidebarProps> = ({
             height: 32,
           }}
         >
-          <KeyboardArrowLeft 
-            sx={{ 
-              fontSize: 20, 
+          <KeyboardArrowLeft
+            sx={{
+              fontSize: 20,
               color: '#64748b',
               transform: open ? 'rotate(0deg)' : 'rotate(180deg)',
               transition: 'transform 0.2s ease',
-            }} 
+            }}
           />
         </IconButton>
       </Box>

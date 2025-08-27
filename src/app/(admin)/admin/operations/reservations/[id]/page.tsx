@@ -12,7 +12,6 @@ import {
   IconButton,
   Alert,
   Avatar,
-  Divider,
   Button,
   Dialog,
   DialogTitle,
@@ -24,18 +23,16 @@ import {
 import {
   ArrowBack as ArrowBackIcon,
   Person as PersonIcon,
-  Hotel as HotelIcon,
   Payment as PaymentIcon,
   CalendarToday as CalendarIcon,
   LocationOn as LocationIcon,
   CheckCircle as CheckIcon,
   Cancel as CancelIcon,
-  Edit as EditIcon,
 } from '@mui/icons-material';
 import { useRouter, useParams } from 'next/navigation';
-import { ReservationData } from '../../../../../../../lib/actions/reservations';
-import { getReservationById } from '../../../../../../../lib/actions/reservations';
-import { confirmReservation, cancelReservation, updateReservationStatus } from '../../../../../../../lib/cms-actions/reservation-management';
+import { ReservationData, getReservationById } from '../../../../../../../lib/actions/reservations';
+import { ReservationStatus } from '@prisma/client';
+import { cancelReservation, confirmReservation } from '../../../../../../../lib/actions/reservation-management';
 
 const ReservationDetailPage: React.FC = () => {
   const router = useRouter();
@@ -44,8 +41,8 @@ const ReservationDetailPage: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [reservation, setReservation] = useState<ReservationData | null>(null);
-  const [actionDialog, setActionDialog] = useState<{ 
-    open: boolean; 
+  const [actionDialog, setActionDialog] = useState<{
+    open: boolean;
     action: 'confirm' | 'cancel' | 'update' | null;
   }>({
     open: false,
@@ -76,9 +73,10 @@ const ReservationDetailPage: React.FC = () => {
       } catch (error) {
         setSnackbar({
           open: true,
-          message: `Failed to load reservation: ${error}`,
+          message: `Failed to load reservation.`,
           severity: 'error',
         });
+        console.error('Error loading reservation:', error);
       } finally {
         setLoading(false);
       }
@@ -96,12 +94,12 @@ const ReservationDetailPage: React.FC = () => {
     try {
       const result = await confirmReservation(reservation.id);
       if (result.success) {
-        setReservation(prev => prev ? { ...prev, isConfirmed: true, status: 'CONFIRMED' } : null);
         setSnackbar({
           open: true,
           message: 'Reservation confirmed successfully',
           severity: 'success',
         });
+        router.refresh(); // Re-fetch data from the server
       } else {
         setSnackbar({
           open: true,
@@ -112,9 +110,10 @@ const ReservationDetailPage: React.FC = () => {
     } catch (error) {
       setSnackbar({
         open: true,
-        message: `An error occurred while confirming reservation ${error}`,
+        message: `An unexpected error occurred while confirming reservation.`,
         severity: 'error',
       });
+      console.error('Error confirming reservation:', error);
     } finally {
       setActionLoading(false);
       setActionDialog({ open: false, action: null });
@@ -128,12 +127,12 @@ const ReservationDetailPage: React.FC = () => {
     try {
       const result = await cancelReservation(reservation.id, cancelReason);
       if (result.success) {
-        setReservation(prev => prev ? { ...prev, status: 'CANCELLED' } : null);
         setSnackbar({
           open: true,
           message: 'Reservation cancelled successfully',
           severity: 'success',
         });
+        router.refresh(); // Re-fetch data from the server
       } else {
         setSnackbar({
           open: true,
@@ -144,9 +143,10 @@ const ReservationDetailPage: React.FC = () => {
     } catch (error) {
       setSnackbar({
         open: true,
-        message: `An error occurred while cancelling reservation ${error}`,
+        message: `An unexpected error occurred while cancelling reservation.`,
         severity: 'error',
       });
+      console.error('Error cancelling reservation:', error);
     } finally {
       setActionLoading(false);
       setActionDialog({ open: false, action: null });
@@ -179,14 +179,29 @@ const ReservationDetailPage: React.FC = () => {
     }).format(amount);
   };
 
-  const getStatusColor = (status: string) => {
-    const colorMap: Record<string, 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info'> = {
+  const getStatusColor = (status: ReservationStatus) => {
+    const colorMap: Record<ReservationStatus, 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info'> = {
       'PENDING': 'warning',
+      'PROVISIONAL': 'warning',
+      'INQUIRY': 'info',
       'CONFIRMED': 'success',
       'CHECKED_IN': 'info',
       'CHECKED_OUT': 'primary',
       'CANCELLED': 'error',
       'NO_SHOW': 'error',
+      'WALKED_IN': 'info',
+    };
+    return colorMap[status] || 'default';
+  };
+
+  const getPaymentStatusColor = (status: string) => {
+    const colorMap: Record<string, 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info'> = {
+      'SUCCEEDED': 'success',
+      'PAID': 'success',
+      'PENDING': 'warning',
+      'FAILED': 'error',
+      'CANCELLED': 'error',
+      'REFUNDED': 'secondary',
     };
     return colorMap[status] || 'default';
   };
@@ -266,25 +281,18 @@ const ReservationDetailPage: React.FC = () => {
                     color={getStatusColor(reservation.status)}
                     sx={{ textTransform: 'capitalize' }}
                   />
-                  {reservation.isConfirmed && (
-                    <Chip
-                      icon={<CheckIcon />}
-                      label="Confirmed"
-                      color="success"
-                    />
-                  )}
-                  {reservation.isPaid && (
+                  {reservation.paymentStatus === 'SUCCEEDED' && (
                     <Chip
                       icon={<PaymentIcon />}
                       label="Paid"
-                      color="info"
+                      color="success"
                     />
                   )}
                 </Box>
               </Box>
-              
+
               <Box sx={{ display: 'flex', gap: 1 }}>
-                {!reservation.isConfirmed && reservation.status === 'PENDING' && (
+                {reservation.status === 'PROVISIONAL' && (
                   <Button
                     startIcon={<CheckIcon />}
                     onClick={() => setActionDialog({ open: true, action: 'confirm' })}
@@ -297,7 +305,7 @@ const ReservationDetailPage: React.FC = () => {
                     Confirm
                   </Button>
                 )}
-                {reservation.status !== 'CANCELLED' && (
+                {reservation.status !== 'CANCELLED' && reservation.status !== 'CHECKED_OUT' && (
                   <Button
                     startIcon={<CancelIcon />}
                     onClick={() => setActionDialog({ open: true, action: 'cancel' })}
@@ -405,7 +413,7 @@ const ReservationDetailPage: React.FC = () => {
                         Check-out: {formatDate(reservation.checkOutDate)}
                       </Typography>
                       <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                        {reservation.numberOfNights} nights
+                        {reservation.nights} nights
                       </Typography>
                     </Box>
                   </Box>
@@ -426,10 +434,10 @@ const ReservationDetailPage: React.FC = () => {
                     <PersonIcon sx={{ color: '#6b7280' }} />
                     <Box>
                       <Typography sx={{ fontWeight: 600, color: '#111827' }}>
-                        {reservation.numberOfGuests} guests
+                        {reservation.adults + reservation.children} guests
                       </Typography>
                       <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                        {reservation.numberOfAdults} adults, {reservation.numberOfChildren} children
+                        {reservation.adults} adults, {reservation.children} children
                       </Typography>
                     </Box>
                   </Box>
@@ -443,13 +451,13 @@ const ReservationDetailPage: React.FC = () => {
                 {reservation.rooms.map((room) => (
                   <Box key={room.id} sx={{ mb: 2, p: 2, backgroundColor: '#f8f9fa', borderRadius: 1 }}>
                     <Typography sx={{ fontWeight: 600, color: '#111827' }}>
-                      Room {room.roomNumber}
+                      Room {room.room?.roomNumber || 'Not Assigned'}
                     </Typography>
                     <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                      {room.roomType.name}
+                      {room.room?.roomType.name || 'Not Specified'}
                     </Typography>
                     <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                      {formatCurrency(Number(room.ratePerNight), reservation.currency)}/night
+                      {formatCurrency(Number(room.baseRate), reservation.currency)}/night
                     </Typography>
                     <Typography sx={{ fontWeight: 600, color: '#111827', fontSize: '0.875rem' }}>
                       Total: {formatCurrency(Number(room.totalAmount), reservation.currency)}
@@ -487,12 +495,12 @@ const ReservationDetailPage: React.FC = () => {
                           {formatCurrency(Number(payment.amount), payment.currency)}
                         </Typography>
                         <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                          {payment.paymentMethod || 'Unknown method'} • {formatDateTime(payment.createdAt)}
+                          {payment.method || 'Unknown method'} • {formatDateTime(payment.createdAt)}
                         </Typography>
                       </Box>
                       <Chip
                         label={payment.status}
-                        color={payment.status === 'COMPLETED' ? 'success' : 'warning'}
+                        color={getPaymentStatusColor(payment.status)}
                         size="small"
                         sx={{ textTransform: 'capitalize' }}
                       />
@@ -505,7 +513,7 @@ const ReservationDetailPage: React.FC = () => {
         )}
 
         {/* Special Requests & Notes */}
-        {(reservation.specialRequests || reservation.notes) && (
+        {(reservation.specialRequests || reservation.internalNotes) && (
           <Card sx={{ borderRadius: 0, boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)' }}>
             <CardContent sx={{ p: 4 }}>
               <Typography
@@ -532,13 +540,13 @@ const ReservationDetailPage: React.FC = () => {
                 </Box>
               )}
 
-              {reservation.notes && (
+              {reservation.internalNotes && (
                 <Box>
                   <Typography variant="subtitle2" sx={{ color: '#111827', fontWeight: 600, mb: 1 }}>
                     Internal Notes:
                   </Typography>
                   <Typography sx={{ color: '#6b7280' }}>
-                    {reservation.notes}
+                    {reservation.internalNotes}
                   </Typography>
                 </Box>
               )}
@@ -593,7 +601,7 @@ const ReservationDetailPage: React.FC = () => {
           <Typography sx={{ mb: 2 }}>
             Are you sure you want to {actionDialog.action} this reservation?
           </Typography>
-          
+
           {actionDialog.action === 'cancel' && (
             <TextField
               label="Cancellation Reason"
@@ -610,7 +618,7 @@ const ReservationDetailPage: React.FC = () => {
               }}
             />
           )}
-          
+
           <Box sx={{ mt: 2, p: 2, backgroundColor: '#f8f9fa', borderRadius: 1 }}>
             <Typography variant="body2" sx={{ fontWeight: 600, color: '#111827' }}>
               {reservation.confirmationNumber}
@@ -633,13 +641,13 @@ const ReservationDetailPage: React.FC = () => {
             disabled={actionLoading}
             sx={{
               backgroundColor: actionDialog.action === 'confirm' ? '#10b981' : '#dc2626',
-              '&:hover': { 
-                backgroundColor: actionDialog.action === 'confirm' ? '#059669' : '#b91c1c' 
+              '&:hover': {
+                backgroundColor: actionDialog.action === 'confirm' ? '#059669' : '#b91c1c'
               },
             }}
           >
-            {actionLoading ? 
-              `${actionDialog.action === 'confirm' ? 'Confirming' : 'Cancelling'}...` : 
+            {actionLoading ?
+              `${actionDialog.action === 'confirm' ? 'Confirming' : 'Cancelling'}...` :
               actionDialog.action === 'confirm' ? 'Confirm' : 'Cancel Reservation'
             }
           </Button>

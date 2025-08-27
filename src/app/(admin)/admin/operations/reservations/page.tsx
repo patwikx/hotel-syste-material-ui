@@ -1,6 +1,7 @@
 import React from 'react';
-import ReservationListPage from './components/reservation-list-page';
+
 import { getAllReservations } from '../../../../../../lib/actions/reservations';
+import ReservationListPage from './components/reservation-list-page';
 
 const ReservationsPage: React.FC = async () => {
   const reservations = await getAllReservations();
