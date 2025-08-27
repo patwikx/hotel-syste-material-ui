@@ -66,6 +66,7 @@ import {
   KeyboardArrowLeft,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 
 const DRAWER_WIDTH = 350;
 const COLLAPSED_WIDTH = 80;
@@ -457,39 +458,15 @@ const Sidebar: React.FC<SidebarProps> = ({
               style={{ flex: 1 }}
             >
               {/* Logo placeholder - you can replace with actual logo */}
-              <Box
-                sx={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: '8px',
-                  backgroundColor: '#4ade80',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  mb: 0.5,
-                }}
-              >
-                <Typography
-                  sx={{
-                    fontSize: '1.1rem',
-                    fontWeight: 800,
-                    color: 'white',
-                    fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif',
-                  }}
-                >
-                  T
-                </Typography>
-              </Box>
-              <Typography
-                sx={{
-                  fontSize: '0.75rem',
-                  color: '#64748b',
-                  fontWeight: 500,
-                  fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif',
-                }}
-              >
-                Tropicana Admin
-              </Typography>
+
+              <div className='flex'>
+ <Image src="https://4b9moeer4y.ufs.sh/f/pUvyWRtocgCV0y3FUvkBwoHGKNiCbEI9uWYstSRk5rXgMLfx" height={32} width={32} alt="TWC Logo" /> 
+ <span className='text-md font-black sans-serf ml-4 mt-1'>Dolores Hotels  </span>
+              </div>
+     
+
+           
+ 
             </motion.div>
           )}
         </AnimatePresence>
