@@ -216,12 +216,12 @@ const Sidebar: React.FC<SidebarProps> = ({
           label: 'Content Management',
           icon: Web,
           children: [
-            { id: 'heroes', label: 'Hero Sections', icon: PublicOutlined, path: '/admin/hero' },
-            { id: 'special-offers', label: 'Special Offers', icon: LocalOffer, path: '/admin/special-offers' },
-            { id: 'events-list', label: 'Events', icon: CalendarMonth, path: '/admin/events' },
-            { id: 'testimonials', label: 'Testimonials', icon: Star, path: '/admin/testimonials' },
-            { id: 'faqs', label: 'FAQs', icon: QuestionAnswer, path: '/admin/faqs' },
-            { id: 'seo-settings', label: 'SEO Settings', icon: SearchOutlined, path: '/admin/seo' },
+            { id: 'heroes', label: 'Hero Sections', icon: PublicOutlined, path: '/admin/cms/hero' },
+            { id: 'special-offers', label: 'Special Offers', icon: LocalOffer, path: '/admin/cms/special-offers' },
+            { id: 'events-list', label: 'Events', icon: CalendarMonth, path: '/admin/cms/events' },
+            { id: 'testimonials', label: 'Testimonials', icon: Star, path: '/admin/cms/testimonials' },
+            { id: 'faqs', label: 'FAQs', icon: QuestionAnswer, path: '/admin/cms/faqs' },
+            { id: 'seo-settings', label: 'SEO Settings', icon: SearchOutlined, path: '/admin/cms/seo' },
           ]
         },
         {
