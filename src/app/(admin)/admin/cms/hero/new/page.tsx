@@ -35,7 +35,7 @@ import {
   Report,
 } from '@mui/icons-material';
 import Link from 'next/link';
-import { createHeroSlide } from '../../../../../../../lib/cms-actions/route';
+import { createHeroSlide } from '../../../../../../../lib/cms-actions/hero';
 
 
 const NewHeroSlidePage: React.FC = () => {

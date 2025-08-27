@@ -2,20 +2,20 @@
 import React from 'react';
 import { Box } from '@mui/material';
 //import Header from '../../components/header';
-import Hero from '../../components/hero';
-import Properties from '../../components/properties';
-import Restaurants from '../../components/restaurants';
-import Events from '../../components/events';
-import SpecialOffers from '../../components/specialoffers';
-import Testimonials from '../../components/testimonials';
-import Maps from '../../components/maps';
-import FAQ from '../../components/faqs';
-import { getFeaturedHero } from '../../lib/actions/heroes';
-import { getFeaturedBusinessUnits } from '../../lib/actions/properties';
-import { getFeaturedRestaurants } from '../../lib/actions/restaurants';
-import { getFeaturedEvents } from '../../lib/actions/events';
-import { getFeaturedSpecialOffers } from '../../lib/actions/special-offers';
-import { getFeaturedTestimonials } from '../../lib/actions/testimonials'; // Add this import
+import Hero from '../../../components/hero';
+import Properties from '../../../components/properties';
+import Restaurants from '../../../components/restaurants';
+import Events from '../../../components/events';
+import SpecialOffers from '../../../components/specialoffers';
+import Testimonials from '../../../components/testimonials';
+import Maps from '../../../components/maps';
+import FAQ from '../../../components/faqs';
+import { getFeaturedHero } from '../../../lib/actions/heroes';
+import { getFeaturedBusinessUnits } from '../../../lib/actions/properties';
+import { getFeaturedRestaurants } from '../../../lib/actions/restaurants';
+import { getFeaturedEvents } from '../../../lib/actions/events';
+import { getFeaturedSpecialOffers } from '../../../lib/actions/special-offers';
+import { getFeaturedTestimonials } from '../../../lib/actions/testimonials'; // Add this import
 
 const Home: React.FC = async () => {
   // Fetch data on the server - add testimonials to the Promise.all
