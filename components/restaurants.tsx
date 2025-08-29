@@ -16,7 +16,7 @@ import {
   ArrowForward,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { RestaurantWithDetails } from '@/types/restaurants';
+import { RestaurantWithDetails } from '../types/restaurants';
 
 interface RestaurantCardProps {
   restaurants: RestaurantWithDetails[];

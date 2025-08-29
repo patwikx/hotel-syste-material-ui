@@ -16,7 +16,7 @@ import {
   ArrowForward,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { BusinessUnitData } from '@/types/properties';
+import { BusinessUnitData } from '../types/properties';
 
 
 // Create motion variants for the animations

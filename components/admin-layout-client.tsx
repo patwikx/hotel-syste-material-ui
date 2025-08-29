@@ -1,4 +1,3 @@
-// app/admin/AdminLayoutClient.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -29,6 +28,7 @@ import {
 } from '@mui/icons-material';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from './sidebar';
+import { BusinessUnitItem } from '../types/business-unit-types';
 
 
 interface AdminLayoutProps {
@@ -36,6 +36,11 @@ interface AdminLayoutProps {
   totalReservationsBadge: number;
   checkInsBadge: number;
   checkOutsBadge: number;
+  // New props for business unit logic
+  businessUnitId: string;
+  businessUnits: BusinessUnitItem[];
+  isAdmin: boolean;
+  userRole: string;
 }
 
 // Use the new, wider dimensions for the sidebar
@@ -53,6 +58,10 @@ const AdminLayoutClient: React.FC<AdminLayoutProps> = ({
   totalReservationsBadge,
   checkInsBadge,
   checkOutsBadge,
+  businessUnitId,
+  businessUnits,
+  isAdmin,
+  userRole,
 }) => {
   const theme = useTheme();
   const pathname = usePathname();
@@ -65,18 +74,21 @@ const AdminLayoutClient: React.FC<AdminLayoutProps> = ({
 
   useEffect(() => {
     const pathSegments = pathname.split('/').filter(Boolean);
-    if (pathSegments.length > 1) {
-      setActiveSection(pathSegments[1]);
+    if (pathSegments.length > 2) { // Skip 'admin' and businessUnitId
+      setActiveSection(pathSegments[2]);
+    } else {
+      setActiveSection('dashboard');
     }
   }, [pathname]);
 
   const generateBreadcrumbs = (): BreadcrumbItem[] => {
     const pathSegments = pathname.split('/').filter(Boolean);
     const breadcrumbs: BreadcrumbItem[] = [
-      { label: 'Admin', href: '/admin', icon: <Home sx={{ fontSize: 16 }} /> }
+      { label: 'Admin', href: `/admin/${businessUnitId}`, icon: <Home sx={{ fontSize: 16 }} /> }
     ];
 
-    for (let i = 1; i < pathSegments.length; i++) {
+    // Skip the business unit ID in the URL path for breadcrumbs
+    for (let i = 2; i < pathSegments.length; i++) {
       const segment = pathSegments[i];
       const href = '/' + pathSegments.slice(0, i + 1).join('/');
       const label = segment
@@ -91,6 +103,7 @@ const AdminLayoutClient: React.FC<AdminLayoutProps> = ({
   };
 
   const breadcrumbs = generateBreadcrumbs();
+  const currentBusinessUnit = businessUnits.find(unit => unit.id === businessUnitId);
 
   const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setUserMenuAnchor(event.currentTarget);
@@ -114,15 +127,14 @@ const AdminLayoutClient: React.FC<AdminLayoutProps> = ({
 
   const handleLogout = () => {
     handleUserMenuClose();
-    router.push('/login');
+    router.push('/auth/sign-out');
   };
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <CssBaseline />
 
-      {/* Sidebar */}
-      <Sidebar
+    <Sidebar
         open={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
         activeSection={activeSection}
@@ -130,6 +142,10 @@ const AdminLayoutClient: React.FC<AdminLayoutProps> = ({
         totalReservationsBadge={totalReservationsBadge}
         checkInsBadge={checkInsBadge}
         checkOutsBadge={checkOutsBadge}
+        businessUnitId={businessUnitId}
+        businessUnits={businessUnits}
+        isAdmin={isAdmin}
+        userRole={userRole}
       />
 
       {/* Main Content Area */}
@@ -146,7 +162,7 @@ const AdminLayoutClient: React.FC<AdminLayoutProps> = ({
           minHeight: '100vh',
         }}
       >
-        {/* Top App Bar */}
+              {/* Top App Bar */}
         <AppBar
           position="fixed"
           elevation={0}
@@ -170,6 +186,33 @@ const AdminLayoutClient: React.FC<AdminLayoutProps> = ({
           >
             {/* Breadcrumbs */}
             <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+              {/* Business Unit Name */}
+              {currentBusinessUnit && (
+                <Box sx={{ mr: 3 }}>
+                  <Typography
+                    sx={{
+                      fontSize: '1.1rem',
+                      fontWeight: 600,
+                      color: '#111827',
+                      fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif',
+                    }}
+                  >
+                    {currentBusinessUnit.name}
+                  </Typography>
+                  {isAdmin && (
+                    <Typography
+                      sx={{
+                        fontSize: '0.75rem',
+                        color: '#6b7280',
+                        fontWeight: 500,
+                      }}
+                    >
+                      Super Admin
+                    </Typography>
+                  )}
+                </Box>
+              )}
+              
               <Breadcrumbs
                 separator={<NavigateNext fontSize="small" sx={{ color: '#6b7280' }} />}
                 sx={{
@@ -231,7 +274,7 @@ const AdminLayoutClient: React.FC<AdminLayoutProps> = ({
                       backgroundColor: alpha('#111827', 0.05),
                     },
                   }}
-                  onClick={() => router.push('/admin/settings')}
+                  onClick={() => router.push(`/admin/${businessUnitId}/settings`)}
                 >
                   <Settings />
                 </IconButton>

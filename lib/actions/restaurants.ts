@@ -1,6 +1,6 @@
 // lib/actions/restaurants.ts
 
-import { RestaurantWithDetails } from '@/types/restaurants';
+import { RestaurantWithDetails } from '../../types/restaurants';
 import { prisma } from '../prisma';
 import { cache } from 'react';
 

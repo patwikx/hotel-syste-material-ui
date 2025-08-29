@@ -1,4 +1,4 @@
-import { SpecialOffer } from '@/types';
+import { SpecialOffer } from '../types';
 
 export const specialOffers: SpecialOffer[] = [
   {

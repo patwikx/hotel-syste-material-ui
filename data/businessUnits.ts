@@ -1,4 +1,4 @@
-import { BusinessUnit } from '@/types';
+import { BusinessUnit } from '../types';
 
 export const businessUnits: BusinessUnit[] = [
   {

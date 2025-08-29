@@ -67,6 +67,9 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import { BusinessUnitItem } from '../types/business-unit-types';
+import BusinessUnitSwitcher from './business-unit-swticher';
+ // Import your BusinessUnitSwitcher
 
 const DRAWER_WIDTH = 350;
 const COLLAPSED_WIDTH = 80;
@@ -76,10 +79,15 @@ interface SidebarProps {
   onToggle: () => void;
   activeSection?: string;
   onSectionChange?: (section: string) => void;
-  // New props for dynamic counts
+  // Badge counts
   totalReservationsBadge: number;
   checkInsBadge: number;
   checkOutsBadge: number;
+  // Business unit props
+  businessUnitId: string;
+  businessUnits: BusinessUnitItem[];
+  isAdmin: boolean;
+  userRole: string;
 }
 
 interface MenuItem {
@@ -89,12 +97,16 @@ interface MenuItem {
   badge?: number;
   children?: MenuItem[];
   path?: string;
+  requiredRoles?: string[]; // Roles that can access this menu item
+  adminOnly?: boolean; // Only super admins can access
 }
 
 interface MenuSection {
   id: string;
   title: string;
   items: MenuItem[];
+  requiredRoles?: string[];
+  adminOnly?: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -105,6 +117,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   totalReservationsBadge,
   checkInsBadge,
   checkOutsBadge,
+  businessUnitId,
+  businessUnits,
+  isAdmin,
+  userRole,
 }) => {
   const router = useRouter();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
@@ -121,7 +137,20 @@ const Sidebar: React.FC<SidebarProps> = ({
     setExpandedSections(newExpanded);
   };
 
-  // Menu sections now use the new props for badge counts
+  // Check if user has required role or is admin
+  const hasPermission = (item: MenuItem): boolean => {
+    if (item.adminOnly && !isAdmin) return false;
+    if (!item.requiredRoles || item.requiredRoles.length === 0) return true;
+    return isAdmin || item.requiredRoles.includes(userRole);
+  };
+
+  const hasSectionPermission = (section: MenuSection): boolean => {
+    if (section.adminOnly && !isAdmin) return false;
+    if (!section.requiredRoles || section.requiredRoles.length === 0) return true;
+    return isAdmin || section.requiredRoles.includes(userRole);
+  };
+
+  // Menu sections with role-based access
   const menuSections: MenuSection[] = [
     {
       id: 'overview',
@@ -131,7 +160,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           id: 'dashboard',
           label: 'Dashboard',
           icon: Dashboard,
-          path: '/admin'
+          path: `/admin/${businessUnitId}`
         },
       ]
     },
@@ -143,66 +172,72 @@ const Sidebar: React.FC<SidebarProps> = ({
           id: 'properties',
           label: 'Properties & Rooms',
           icon: Hotel,
+          requiredRoles: ['SUPER_ADMIN', 'MANAGER', 'FRONT_DESK'],
           children: [
-            { id: 'business-units', label: 'Business Units', icon: BusinessCenter, path: '/admin/operations/properties' },
-            { id: 'room-types', label: 'Room Types', icon: Category, path: '/admin/operations/room-types' },
-            { id: 'rooms', label: 'Rooms', icon: Bed, path: '/admin/operations/rooms' },
-            { id: 'amenities', label: 'Amenities', icon: EventSeat, path: '/admin/operations/amenities' },
+            { id: 'business-units', label: 'Business Units', icon: BusinessCenter, path: `/admin/${businessUnitId}/operations/properties`, adminOnly: true },
+            { id: 'room-types', label: 'Room Types', icon: Category, path: `/admin/${businessUnitId}/operations/room-types`, requiredRoles: ['SUPER_ADMIN', 'MANAGER'] },
+            { id: 'rooms', label: 'Rooms', icon: Bed, path: `/admin/${businessUnitId}/operations/rooms`, requiredRoles: ['SUPER_ADMIN', 'MANAGER', 'FRONT_DESK'] },
+            { id: 'amenities', label: 'Amenities', icon: EventSeat, path: `/admin/${businessUnitId}/operations/amenities`, requiredRoles: ['SUPER_ADMIN', 'MANAGER'] },
           ]
         },
         {
           id: 'reservations',
           label: 'Reservations',
           icon: BookOnline,
-          badge: totalReservationsBadge, // Dynamic count
+          badge: totalReservationsBadge,
+          requiredRoles: ['SUPER_ADMIN', 'MANAGER', 'FRONT_DESK'],
           children: [
-            { id: 'reservation-list', label: 'All Reservations', icon: Assignment, path: '/admin/operations/reservations' },
-            { id: 'check-ins', label: 'Check-ins Today', icon: CheckCircle, badge: checkInsBadge, path: '/admin/operations/check-ins' }, // Dynamic count
-            { id: 'check-outs', label: 'Check-outs Today', icon: Schedule, badge: checkOutsBadge, path: '/admin/operations/check-outs' }, // Dynamic count
-            { id: 'stays', label: 'Current Stays', icon: HomeWork, path: '/admin/operations/stays' },
+            { id: 'reservation-list', label: 'All Reservations', icon: Assignment, path: `/admin/${businessUnitId}/operations/reservations` },
+            { id: 'check-ins', label: 'Check-ins Today', icon: CheckCircle, badge: checkInsBadge, path: `/admin/${businessUnitId}/operations/check-ins` },
+            { id: 'check-outs', label: 'Check-outs Today', icon: Schedule, badge: checkOutsBadge, path: `/admin/${businessUnitId}/operations/check-outs` },
+            { id: 'stays', label: 'Current Stays', icon: HomeWork, path: `/admin/${businessUnitId}/operations/stays` },
           ]
         },
         {
           id: 'guests',
           label: 'Guest Management',
           icon: People,
+          requiredRoles: ['SUPER_ADMIN', 'MANAGER', 'FRONT_DESK'],
           children: [
-            { id: 'guest-list', label: 'Guest Directory', icon: Person, path: '/admin/operations/guests' },
-            { id: 'guest-interactions', label: 'Guest Interactions', icon: RateReview, path: '/admin/operations/guest-interactions' },
+            { id: 'guest-list', label: 'Guest Directory', icon: Person, path: `/admin/${businessUnitId}/operations/guests` },
+            { id: 'guest-interactions', label: 'Guest Interactions', icon: RateReview, path: `/admin/${businessUnitId}/operations/guest-interactions` },
           ]
         },
         {
           id: 'payments',
           label: 'Payments & Billing',
           icon: Payment,
+          requiredRoles: ['SUPER_ADMIN', 'MANAGER', 'FRONT_DESK'],
           children: [
-            { id: 'payments-list', label: 'All Payments', icon: CreditCard, path: '/admin/operations/payments' },
-            { id: 'payment-summaries', label: 'Payment Analytics', icon: TrendingUp, path: '/admin/operations/payment-analytics' },
-            { id: 'incidental-charges', label: 'Incidental Charges', icon: Receipt, path: '/admin/operations/incidental-charges' },
-            { id: 'paymongo-integration', label: 'PayMongo Integration', icon: AccountBalance, path: '/admin/operations/paymongo' },
-            { id: 'charges-folios', label: 'Charges & Folios', icon: MonetizationOn, path: '/admin/operations/charges' },
+            { id: 'payments-list', label: 'All Payments', icon: CreditCard, path: `/admin/${businessUnitId}/operations/payments` },
+            { id: 'payment-summaries', label: 'Payment Analytics', icon: TrendingUp, path: `/admin/${businessUnitId}/operations/payment-analytics`, requiredRoles: ['SUPER_ADMIN', 'MANAGER'] },
+            { id: 'incidental-charges', label: 'Incidental Charges', icon: Receipt, path: `/admin/${businessUnitId}/operations/incidental-charges` },
+            { id: 'paymongo-integration', label: 'PayMongo Integration', icon: AccountBalance, path: `/admin/${businessUnitId}/operations/paymongo`, requiredRoles: ['SUPER_ADMIN', 'MANAGER'] },
+            { id: 'charges-folios', label: 'Charges & Folios', icon: MonetizationOn, path: `/admin/${businessUnitId}/operations/charges` },
           ]
         },
         {
           id: 'operations-hotel',
           label: 'Hotel Operations',
           icon: RoomService,
+          requiredRoles: ['SUPER_ADMIN', 'MANAGER', 'HOUSEKEEPING', 'MAINTENANCE'],
           children: [
-            { id: 'service-requests', label: 'Service Requests', icon: Assignment, badge: 3, path: '/admin/operations/service-requests' },
-            { id: 'tasks', label: 'Tasks & Assignments', icon: Assignment, path: '/admin/operations/tasks' },
-            { id: 'housekeeping', label: 'Housekeeping', icon: CleaningServices, path: '/admin/operations/housekeeping' },
-            { id: 'maintenance', label: 'Maintenance', icon: Build, path: '/admin/operations/maintenance' },
-            { id: 'departments', label: 'Departments', icon: Groups, path: '/admin/operations/departments' },
+            { id: 'service-requests', label: 'Service Requests', icon: Assignment, badge: 3, path: `/admin/${businessUnitId}/operations/service-requests` },
+            { id: 'tasks', label: 'Tasks & Assignments', icon: Assignment, path: `/admin/${businessUnitId}/operations/tasks` },
+            { id: 'housekeeping', label: 'Housekeeping', icon: CleaningServices, path: `/admin/${businessUnitId}/operations/housekeeping`, requiredRoles: ['SUPER_ADMIN', 'MANAGER', 'HOUSEKEEPING'] },
+            { id: 'maintenance', label: 'Maintenance', icon: Build, path: `/admin/${businessUnitId}/operations/maintenance`, requiredRoles: ['SUPER_ADMIN', 'MANAGER', 'MAINTENANCE'] },
+            { id: 'departments', label: 'Departments', icon: Groups, path: `/admin/${businessUnitId}/operations/departments`, requiredRoles: ['SUPER_ADMIN', 'MANAGER'] },
           ]
         },
         {
           id: 'dining',
           label: 'Restaurants & Dining',
           icon: Restaurant,
+          requiredRoles: ['SUPER_ADMIN', 'MANAGER', 'RESTAURANT'],
           children: [
-            { id: 'restaurants', label: 'Restaurants', icon: LocalDining, path: '/admin/operations/restaurants' },
-            { id: 'menu-management', label: 'Menu Management', icon: Inventory, path: '/admin/operations/menus' },
-            { id: 'restaurant-reservations', label: 'Dining Reservations', icon: EventSeat, path: '/admin/operations/dining-reservations' },
+            { id: 'restaurants', label: 'Restaurants', icon: LocalDining, path: `/admin/${businessUnitId}/operations/restaurants` },
+            { id: 'menu-management', label: 'Menu Management', icon: Inventory, path: `/admin/${businessUnitId}/operations/menus` },
+            { id: 'restaurant-reservations', label: 'Dining Reservations', icon: EventSeat, path: `/admin/${businessUnitId}/operations/dining-reservations` },
           ]
         },
       ]
@@ -210,14 +245,15 @@ const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'content',
       title: 'CONTENT & MARKETING',
+      requiredRoles: ['SUPER_ADMIN', 'MANAGER', 'MARKETING'],
       items: [
         {
           id: 'marketing',
           label: 'Marketing & Offers',
           icon: LocalOffer,
           children: [
-            { id: 'event-bookings', label: 'Event Bookings', icon: BookOnline, path: '/admin/event-bookings' },
-            { id: 'promos-vouchers', label: 'Promos & Vouchers', icon: CampaignOutlined, path: '/admin/promos' },
+            { id: 'event-bookings', label: 'Event Bookings', icon: BookOnline, path: `/admin/${businessUnitId}/event-bookings` },
+            { id: 'promos-vouchers', label: 'Promos & Vouchers', icon: CampaignOutlined, path: `/admin/${businessUnitId}/promos` },
           ]
         },
         {
@@ -225,12 +261,12 @@ const Sidebar: React.FC<SidebarProps> = ({
           label: 'Content Management',
           icon: Web,
           children: [
-            { id: 'heroes', label: 'Hero Sections', icon: PublicOutlined, path: '/admin/cms/hero' },
-            { id: 'special-offers', label: 'Special Offers', icon: LocalOffer, path: '/admin/cms/special-offers' },
-            { id: 'events-list', label: 'Events', icon: CalendarMonth, path: '/admin/cms/events' },
-            { id: 'testimonials', label: 'Testimonials', icon: Star, path: '/admin/cms/testimonials' },
-            { id: 'faqs', label: 'FAQs', icon: QuestionAnswer, path: '/admin/cms/faqs' },
-            { id: 'seo-settings', label: 'SEO Settings', icon: SearchOutlined, path: '/admin/cms/seo' },
+            { id: 'heroes', label: 'Hero Sections', icon: PublicOutlined, path: `/admin/${businessUnitId}/cms/hero` },
+            { id: 'special-offers', label: 'Special Offers', icon: LocalOffer, path: `/admin/${businessUnitId}/cms/special-offers` },
+            { id: 'events-list', label: 'Events', icon: CalendarMonth, path: `/admin/${businessUnitId}/cms/events` },
+            { id: 'testimonials', label: 'Testimonials', icon: Star, path: `/admin/${businessUnitId}/cms/testimonials` },
+            { id: 'faqs', label: 'FAQs', icon: QuestionAnswer, path: `/admin/${businessUnitId}/cms/faqs` },
+            { id: 'seo-settings', label: 'SEO Settings', icon: SearchOutlined, path: `/admin/${businessUnitId}/cms/seo` },
           ]
         },
         {
@@ -238,11 +274,11 @@ const Sidebar: React.FC<SidebarProps> = ({
           label: 'Communications',
           icon: ContactMail,
           children: [
-            { id: 'contact-forms', label: 'Contact Forms', icon: ContactMail, badge: 2, path: '/admin/contact-forms' },
-            { id: 'newsletter', label: 'Newsletter', icon: Email, path: '/admin/newsletter' },
-            { id: 'notifications', label: 'Notifications', icon: Notifications, path: '/admin/notifications' },
-            { id: 'email-templates', label: 'Email Templates', icon: Email, path: '/admin/email-templates' },
-            { id: 'announcements', label: 'Announcements', icon: AnnouncementOutlined, path: '/admin/announcements' },
+            { id: 'contact-forms', label: 'Contact Forms', icon: ContactMail, badge: 2, path: `/admin/${businessUnitId}/contact-forms` },
+            { id: 'newsletter', label: 'Newsletter', icon: Email, path: `/admin/${businessUnitId}/newsletter` },
+            { id: 'notifications', label: 'Notifications', icon: Notifications, path: `/admin/${businessUnitId}/notifications` },
+            { id: 'email-templates', label: 'Email Templates', icon: Email, path: `/admin/${businessUnitId}/email-templates` },
+            { id: 'announcements', label: 'Announcements', icon: AnnouncementOutlined, path: `/admin/${businessUnitId}/announcements` },
           ]
         },
       ]
@@ -250,15 +286,16 @@ const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'management',
       title: 'MANAGEMENT',
+      requiredRoles: ['SUPER_ADMIN', 'MANAGER'],
       items: [
         {
           id: 'user-management',
           label: 'User Management',
           icon: People,
           children: [
-            { id: 'users', label: 'Users', icon: Person, path: '/admin/users' },
-            { id: 'roles-permissions', label: 'Roles & Permissions', icon: Security, path: '/admin/roles' },
-            { id: 'user-sessions', label: 'User Sessions', icon: PersonAdd, path: '/admin/sessions' },
+            { id: 'users', label: 'Users', icon: Person, path: `/admin/${businessUnitId}/users` },
+            { id: 'roles-permissions', label: 'Roles & Permissions', icon: Security, path: `/admin/${businessUnitId}/roles`, adminOnly: true },
+            { id: 'user-sessions', label: 'User Sessions', icon: PersonAdd, path: `/admin/${businessUnitId}/sessions` },
           ]
         },
         {
@@ -266,9 +303,9 @@ const Sidebar: React.FC<SidebarProps> = ({
           label: 'Analytics & Reports',
           icon: Analytics,
           children: [
-            { id: 'page-analytics', label: 'Page Analytics', icon: TrendingUp, path: '/admin/page-analytics' },
-            { id: 'search-analytics', label: 'Search Analytics', icon: SearchOutlined, path: '/admin/search-analytics' },
-            { id: 'feedback', label: 'User Feedback', icon: FeedbackOutlined, path: '/admin/feedback' },
+            { id: 'page-analytics', label: 'Page Analytics', icon: TrendingUp, path: `/admin/${businessUnitId}/page-analytics` },
+            { id: 'search-analytics', label: 'Search Analytics', icon: SearchOutlined, path: `/admin/${businessUnitId}/search-analytics` },
+            { id: 'feedback', label: 'User Feedback', icon: FeedbackOutlined, path: `/admin/${businessUnitId}/feedback` },
           ]
         },
         {
@@ -276,10 +313,10 @@ const Sidebar: React.FC<SidebarProps> = ({
           label: 'System Settings',
           icon: Settings,
           children: [
-            { id: 'website-config', label: 'Website Configuration', icon: Settings, path: '/admin/website-config' },
-            { id: 'system-settings', label: 'System Settings', icon: Settings, path: '/admin/system-settings' },
-            { id: 'audit-logs', label: 'Audit Logs', icon: Assignment, path: '/admin/audit-logs' },
-            { id: 'help-support', label: 'Help & Support', icon: Help, path: '/admin/help' },
+            { id: 'website-config', label: 'Website Configuration', icon: Settings, path: `/admin/${businessUnitId}/website-config`, requiredRoles: ['SUPER_ADMIN', 'MANAGER'] },
+            { id: 'system-settings', label: 'System Settings', icon: Settings, path: `/admin/${businessUnitId}/system-settings`, adminOnly: true },
+            { id: 'audit-logs', label: 'Audit Logs', icon: Assignment, path: `/admin/${businessUnitId}/audit-logs` },
+            { id: 'help-support', label: 'Help & Support', icon: Help, path: `/admin/${businessUnitId}/help` },
           ]
         },
       ]
@@ -292,6 +329,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const renderMenuItem = (item: MenuItem, level: number = 0) => {
+    // Check if user has permission to see this item
+    if (!hasPermission(item)) {
+      return null;
+    }
+
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedSections.has(item.id);
     const isActive = activeSection === item.id;
@@ -306,6 +348,15 @@ const Sidebar: React.FC<SidebarProps> = ({
         onSectionChange?.(item.id);
       }
     };
+
+    // Filter children based on permissions
+    const visibleChildren = hasChildren ? item.children?.filter(child => hasPermission(child)) : [];
+    const hasVisibleChildren = visibleChildren && visibleChildren.length > 0;
+
+    // Don't render if no visible children
+    if (hasChildren && !hasVisibleChildren) {
+      return null;
+    }
 
     return (
       <Box key={item.id}>
@@ -379,7 +430,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               )}
             </AnimatePresence>
 
-            {hasChildren && open && (
+            {hasVisibleChildren && open && (
               <motion.div
                 animate={{ rotate: isExpanded ? 90 : 0 }}
                 transition={{ duration: 0.2 }}
@@ -395,10 +446,10 @@ const Sidebar: React.FC<SidebarProps> = ({
           </ListItemButton>
         </ListItem>
 
-        {hasChildren && (
+        {hasVisibleChildren && (
           <Collapse in={isExpanded && open} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
-              {item.children?.map((childItem) => renderMenuItem(childItem, level + 1))}
+              {visibleChildren?.map((childItem) => renderMenuItem(childItem, level + 1))}
             </List>
           </Collapse>
         )}
@@ -407,6 +458,19 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const renderMenuSection = (section: MenuSection) => {
+    // Check if user has permission to see this section
+    if (!hasSectionPermission(section)) {
+      return null;
+    }
+
+    // Filter items based on permissions
+    const visibleItems = section.items.filter(item => hasPermission(item));
+    
+    // Don't render section if no visible items
+    if (visibleItems.length === 0) {
+      return null;
+    }
+
     return (
       <Box key={section.id} sx={{ mb: 3 }}>
         {open && (
@@ -427,7 +491,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         <List component="div" disablePadding>
-          {section.items.map((item) => renderMenuItem(item))}
+          {visibleItems.map((item) => renderMenuItem(item))}
         </List>
       </Box>
     );
@@ -462,10 +526,9 @@ const Sidebar: React.FC<SidebarProps> = ({
               transition={{ duration: 0.2 }}
               style={{ flex: 1 }}
             >
-              {/* Logo placeholder - you can replace with actual logo */}
               <div className='flex'>
-                <Image src="https://4b9moeer4y.ufs.sh/f/pUvyWRtocgCV0y3FUvkBwoHGKNiCbEI9uWYstSRk5rXgMLfx" height={32} width={32} alt="TWC Logo" />
-                <span className='text-md font-black sans-serf ml-4 mt-1'>Dolores Hotels </span>
+                <Image src="https://4b9moeer4y.ufs.sh/f/pUvyWRtocgCV0y3FUvkBwoHGKNiCbEI9uWYstSRk5rXgMLfx" height={32} width={32} alt="Dolores Hotels Logo" />
+                <span className='text-md font-black sans-serf ml-4 mt-1'>Dolores Hotels</span>
               </div>
             </motion.div>
           )}
@@ -493,6 +556,16 @@ const Sidebar: React.FC<SidebarProps> = ({
           />
         </IconButton>
       </Box>
+
+      {/* Business Unit Switcher */}
+      {open && (
+        <Box sx={{ p: 2, borderBottom: '1px solid #f1f5f9' }}>
+          <BusinessUnitSwitcher 
+            items={businessUnits}
+            className="w-full"
+          />
+        </Box>
+      )}
 
       {/* Navigation */}
       <Box

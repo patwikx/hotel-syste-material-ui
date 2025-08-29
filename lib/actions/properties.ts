@@ -1,7 +1,7 @@
 // lib/actions/business-units.ts
 'use server';
 
-import { BusinessUnitData } from '@/types/properties';
+import { BusinessUnitData } from '../../types/properties';
 import { prisma } from '../prisma'; // Adjust path to your prisma client
 
 
